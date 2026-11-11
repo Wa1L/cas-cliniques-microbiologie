@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cas Clinique — MicroCas</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .detail-container { max-width: 860px; margin: 40px auto; padding: 0 24px; }
+        .detail-back { margin-bottom: 24px; }
+        .detail-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 32px rgba(0,0,0,0.08); }
+        .detail-header { padding: 32px; color: white; }
+        .detail-numero { font-size: 0.85rem; opacity: 0.8; margin-bottom: 8px; }
+        .detail-titre { font-size: 1.6rem; font-weight: 700; margin-bottom: 8px; }
+        .detail-meta { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px; }
+        .meta-item { background: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 100px; font-size: 0.8rem; }
+        .detail-body { padding: 32px; }
+        .detail-section { margin-bottom: 32px; }
+        .detail-section h2 { font-size: 1.1rem; font-weight: 700; color: #1e40af; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #eff6ff; }
+        .enonce-text { background: #f8fafc; border-left: 4px solid #0ea5e9; padding: 20px; border-radius: 0 8px 8px 0; font-size: 0.9rem; line-height: 1.8; white-space: pre-wrap; }
+        .corrige-text { background: #f0fdf4; border-left: 4px solid #22c55e; padding: 20px; border-radius: 0 8px 8px 0; font-size: 0.9rem; line-height: 1.8; white-space: pre-wrap; }
+        .corrige-suggere { background: #eff6ff; border-left-color: #3b82f6; }
+        .detail-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+        .detail-nav { display: flex; justify-content: space-between; padding: 24px 32px; border-top: 1px solid #e5e7eb; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container nav-inner">
+            <div class="nav-brand">
+                <a href="index.html" style="text-decoration:none; display:flex; align-items:center; gap:8px; color:inherit;">
+                    <span class="nav-icon">🧫</span>
+                    <span class="nav-title">MicroCas</span>
+                </a>
+            </div>
+            <div class="nav-links">
+                <a href="index.html">Accueil</a>
+                <a href="cas.html">Cas Cliniques</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="detail-container">
+        <div class="detail-back">
+            <a href="cas.html" class="btn btn-outline">← Retour aux cas</a>
+        </div>
+        <div id="casDetail" class="detail-card">
+            <div class="loading-state" style="padding: 60px; text-align: center;">
+                <div class="spinner"></div>
+                <p>Chargement du cas...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const casId = params.get('id');
+
+        loadDatabase().then(data => {
+            const cas = data.cas.find(c => c.id == casId);
+            if (!cas) {
+                document.getElementById('casDetail').innerHTML = '<p style="padding:40px;text-align:center">Cas introuvable</p>';
+                return;
+            }
+
+            document.title = `Cas ${cas.numero} — ${cas.chapitre_nom} | MicroCas`;
+
+            const partieColors = {
+                'Résistance aux antibiotiques': '#dc2626',
+                'Virologie': '#7c3aed',
+                'Bactériologie': '#0369a1',
+                'Mix': '#065f46'
+            };
+
+            const color = partieColors[cas.partie] || '#374151';
+            const isCorrigeType = cas.type_corrige === 'Corrigé type';
+            const corrigeClass = isCorrigeType ? 'corrige-text' : 'corrige-text corrige-suggere';
+            const corrigeTitle = isCorrigeType ? '✅ Corrigé type (officiel)' : '💡 Corrigé suggéré (par l\'auteur)';
+
+            const tagsHtml = cas.tags.map(t => `<span class="tag">${t}</span>`).join('');
+
+            // Navigation vers cas précédent/suivant
+            const currentIndex = data.cas.findIndex(c => c.id == casId);
+            const prevCas = currentIndex > 0 ? data.cas[currentIndex - 1] : null;
+            const nextCas = currentIndex < data.cas.length - 1 ? data.cas[currentIndex + 1] : null;
+
+            document.getElementById('casDetail').innerHTML = `
+                <div class="detail-header" style="background: linear-gradient(135deg, ${color}, ${color}cc)">
+                    <div class="detail-numero">📌 Cas Clinique n° ${cas.numero}</div>
+                    <div class="detail-titre">${cas.chapitre_nom}</div>
+                    <div class="detail-meta">
+                        <span class="meta-item">🏥 ${cas.partie}</span>
+                        ${cas.source ? `<span class="meta-item">📋 ${cas.source}</span>` : ''}
+                        ${cas.difficulte ? `<span class="meta-item">⚡ ${cas.difficulte}</span>` : ''}
+                        <span class="meta-item">${cas.type_corrige}</span>
+                    </div>
+                </div>
+
+                <div class="detail-body">
+                    ${cas.tags.length > 0 ? `
+                        <div class="detail-section">
+                            <h2>🏷️ Mots-clés</h2>
+                            <div class="detail-tags">${tagsHtml}</div>
+                        </div>
+                    ` : ''}
+
+                    <div class="detail-section">
+                        <h2>📋 Énoncé</h2>
+                        <div class="enonce-text">${cas.enonce}</div>
+                    </div>
+
+                    ${cas.questions ? `
+                        <div class="detail-section">
+                            <h2>❓ Questions</h2>
+                            <div class="enonce-text">${cas.questions}</div>
+                        </div>
+                    ` : ''}
+
+                    <div class="detail-section">
+                        <h2>${corrigeTitle}</h2>
+                        <div class="${corrigeClass}">${cas.corrige}</div>
+                    </div>
+                </div>
+
+                <div class="detail-nav">
+                    ${prevCas ? `<a href="cas-detail.html?id=${prevCas.id}" class="btn btn-outline">← Cas ${prevCas.numero}</a>` : '<span></span>'}
+                    ${nextCas ? `<a href="cas-detail.html?id=${nextCas.id}" class="btn btn-outline">Cas ${nextCas.numero} →</a>` : '<span></span>'}
+                </div>
+            `;
+        });
+    </script>
+</body>
+</html>
