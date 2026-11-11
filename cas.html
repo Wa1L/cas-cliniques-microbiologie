@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tous les Cas Cliniques — MicroCas</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="container nav-inner">
+            <div class="nav-brand">
+                <a href="index.html" style="text-decoration:none; display:flex; align-items:center; gap:8px; color:inherit;">
+                    <span class="nav-icon">🧫</span>
+                    <span class="nav-title">MicroCas</span>
+                </a>
+            </div>
+            <div class="nav-links">
+                <a href="index.html">Accueil</a>
+                <a href="cas.html" class="active">Cas Cliniques</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="page-header">
+        <div class="container">
+            <h1>Tous les Cas Cliniques</h1>
+            <p id="totalCount">Chargement...</p>
+        </div>
+    </div>
+
+    <!-- FILTRES & RECHERCHE -->
+    <div class="filters-bar">
+        <div class="container">
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" placeholder="Rechercher : BLSE, pneumocoque, hépatite B..." />
+            </div>
+            <div class="filters-row">
+                <select id="filterPartie">
+                    <option value="">Toutes les parties</option>
+                    <option value="Résistance aux antibiotiques">🛡️ Résistance ATB</option>
+                    <option value="Virologie">🦠 Virologie</option>
+                    <option value="Bactériologie">🔬 Bactériologie</option>
+                    <option value="Mix">🔀 Mix</option>
+                </select>
+                <select id="filterChapitre">
+                    <option value="">Tous les chapitres</option>
+                </select>
+                <select id="filterDifficulte">
+                    <option value="">Toutes difficultés</option>
+                    <option value="Facile">🟢 Facile</option>
+                    <option value="Moyen">🟡 Moyen</option>
+                    <option value="Difficile">🔴 Difficile</option>
+                </select>
+                <select id="filterCorrige">
+                    <option value="">Tous types</option>
+                    <option value="Corrigé type">✅ Corrigé type</option>
+                    <option value="Corrigé suggéré">💡 Corrigé suggéré</option>
+                </select>
+                <button onclick="resetFilters()" class="btn-reset">✕ Réinitialiser</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RÉSULTATS -->
+    <div class="container">
+        <div class="results-info" id="resultsInfo"></div>
+        <div class="cas-grid" id="casGrid">
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>Chargement des cas cliniques...</p>
+            </div>
+        </div>
+        
+        <!-- PAGINATION -->
+        <div class="pagination" id="pagination"></div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p>© 2026 Dr. Wail NAMOUNE · Tous droits réservés</p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+    <script>
+        let allCas = [];
+        let filteredCas = [];
+        const PER_PAGE = 12;
+        let currentPage = 1;
+
+        loadDatabase().then(data => {
+            allCas = data.cas;
+            filteredCas = [...allCas];
+            
+            document.getElementById('totalCount').textContent = 
+                `${data.total} cas cliniques · 26 chapitres`;
+            
+            populateChapitreFilter(allCas);
+            renderCasGrid();
+            
+            // Événements de filtrage
+            document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 300));
+            document.getElementById('filterPartie').addEventListener('change', applyFilters);
+            document.getElementById('filterChapitre').addEventListener('change', applyFilters);
+            document.getElementById('filterDifficulte').addEventListener('change', applyFilters);
+            document.getElementById('filterCorrige').addEventListener('change', applyFilters);
+        });
+
+        function applyFilters() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const partie = document.getElementById('filterPartie').value;
+            const chapitre = document.getElementById('filterChapitre').value;
+            const difficulte = document.getElementById('filterDifficulte').value;
+            const corrige = document.getElementById('filterCorrige').value;
+
+            filteredCas = allCas.filter(cas => {
+                const matchSearch = !search || 
+                    cas.numero.toLowerCase().includes(search) ||
+                    cas.chapitre_nom.toLowerCase().includes(search) ||
+                    cas.enonce.toLowerCase().includes(search) ||
+                    cas.tags.some(t => t.toLowerCase().includes(search)) ||
+                    (cas.source && cas.source.toLowerCase().includes(search));
+                
+                const matchPartie = !partie || cas.partie === partie;
+                const matchChapitre = !chapitre || cas.chapitre_num == chapitre;
+                const matchDifficulte = !difficulte || cas.difficulte === difficulte;
+                const matchCorrige = !corrige || cas.type_corrige === corrige;
+
+                return matchSearch && matchPartie && matchChapitre && matchDifficulte && matchCorrige;
+            });
+
+            currentPage = 1;
+            renderCasGrid();
+        }
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterPartie').value = '';
+            document.getElementById('filterChapitre').value = '';
+            document.getElementById('filterDifficulte').value = '';
+            document.getElementById('filterCorrige').value = '';
+            filteredCas = [...allCas];
+            currentPage = 1;
+            renderCasGrid();
+        }
+    </script>
+</body>
+</html>
